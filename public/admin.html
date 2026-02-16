@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Admin Panel</title>
+</head>
+<body>
+
+<h2>Admin Panel</h2>
+
+<input type="password" id="adminPass" placeholder="Admin Password">
+<button onclick="load()">Load Tickets</button>
+
+<div id="tickets"></div>
+
+<script>
+async function load() {
+  const res = await fetch("/api/tickets");
+  const tickets = await res.json();
+
+  let html = "";
+
+  tickets.forEach(t => {
+    html += `
+      <div style="border:1px solid black; margin:10px; padding:10px;">
+        Ticket ID: ${t.ticketId} <br>
+        Name: ${t.employeeName} <br>
+        Status: ${t.status} <br>
+
+        <select onchange="update('${t._id}', this.value)">
+          <option ${t.status=="Open"?"selected":""}>Open</option>
+          <option ${t.status=="In Progress"?"selected":""}>In Progress</option>
+          <option ${t.status=="Closed"?"selected":""}>Closed</option>
+        </select>
+      </div>
+    `;
+  });
+
+  document.getElementById("tickets").innerHTML = html;
+}
+
+async function update(id, status) {
+  const password = document.getElementById("adminPass").value;
+
+  await fetch("/api/tickets/" + id, {
+    method:"PUT",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify({
+      status: status,
+      adminPassword: password
+    })
+  });
+
+  load();
+}
+</script>
+
+</body>
+</html>

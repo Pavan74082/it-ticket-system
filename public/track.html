@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>Track Ticket</title>
+</head>
+<body>
+
+<h2>Track Ticket</h2>
+
+<input type="text" id="ticketId" placeholder="Enter Ticket ID">
+<button onclick="track()">Track</button>
+
+<div id="result"></div>
+
+<script>
+async function track() {
+  const id = document.getElementById("ticketId").value;
+
+  const res = await fetch("/api/track/" + id);
+  const data = await res.json();
+
+  if (data.message) {
+    document.getElementById("result").innerText = data.message;
+  } else {
+    document.getElementById("result").innerHTML = `
+      Name: ${data.employeeName} <br>
+      Department: ${data.department} <br>
+      Issue: ${data.issueType} <br>
+      Status: ${data.status}
+    `;
+  }
+}
+</script>
+
+</body>
+</html>

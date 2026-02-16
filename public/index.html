@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html>
+<head>
+<title>IT Ticket Dashboard</title>
+
+<style>
+body {
+  margin: 0;
+  font-family: Arial, sans-serif;
+  background-image: url("images/background.jpg");
+  background-size: cover;
+  background-position: center;
+  background-attachment: fixed;
+}
+
+.overlay {
+  background: rgba(255,255,255,0.95);
+  min-height: 100vh;
+  display: flex;
+}
+
+/* Sidebar */
+.sidebar {
+  width: 220px;
+  background: #c40000;
+  color: white;
+  padding: 20px;
+}
+
+.sidebar h2 {
+  text-align: center;
+}
+
+.sidebar button {
+  width: 100%;
+  padding: 10px;
+  margin: 8px 0;
+  border: none;
+  background: white;
+  color: #c40000;
+  cursor: pointer;
+  border-radius: 5px;
+  font-weight: bold;
+}
+
+.sidebar button:hover {
+  background: #ffe5e5;
+}
+
+/* Main Content */
+.main {
+  flex: 1;
+  padding: 30px;
+}
+
+.section {
+  display: none;
+}
+
+.card {
+  background: white;
+  padding: 15px;
+  border-radius: 8px;
+  margin: 10px 0;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.1);
+}
+
+input, textarea, select {
+  width: 100%;
+  padding: 8px;
+  margin-bottom: 10px;
+  border-radius: 5px;
+  border: 1px solid #ccc;
+}
+
+button.primary {
+  background: #c40000;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  cursor: pointer;
+  border-radius: 5px;
+}
+
+button.primary:hover {
+  background: #900000;
+}
+
+/* Dashboard Cards */
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 15px;
+}
+
+.dashboard-box {
+  background: #c40000;
+  color: white;
+  padding: 20px;
+  border-radius: 10px;
+  text-align: center;
+  font-size: 18px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="overlay">
+
+<!-- Sidebar -->
+<div class="sidebar">
+  <h2>IT System</h2>
+  <button onclick="showSection('dashboard')">Dashboard</button>
+  <button onclick="showSection('create')">Create Ticket</button>
+  <button onclick="showSection('track')">Track Ticket</button>
+  <button onclick="showSection('admin')">Admin Panel</button>
+</div>
+
+<!-- Main -->
+<div class="main">
+
+<!-- DASHBOARD -->
+<div id="dashboard" class="section">
+  <h2>Dashboard</h2>
+  <div class="dashboard-grid">
+    <div class="dashboard-box" id="totalBox">Total: 0</div>
+    <div class="dashboard-box" id="openBox">Open: 0</div>
+    <div class="dashboard-box" id="progressBox">In Progress: 0</div>
+    <div class="dashboard-box" id="closedBox">Closed: 0</div>
+  </div>
+</div>
+
+<!-- CREATE -->
+<div id="create" class="section">
+  <h2>Create Ticket</h2>
+  <form id="createForm">
+    <input type="text" name="employeeName" placeholder="Employee Name" required>
+    <input type="text" name="department" placeholder="Department" required>
+    <input type="text" name="issueType" placeholder="Issue Type" required>
+    <textarea name="description" placeholder="Describe Issue" required></textarea>
+    <button class="primary" type="submit">Submit</button>
+  </form>
+  <h3 id="createResult"></h3>
+</div>
+
+<!-- TRACK -->
+<div id="track" class="section">
+  <h2>Track Ticket</h2>
+  <input type="text" id="trackId" placeholder="Enter Ticket ID">
+  <button class="primary" onclick="trackTicket()">Track</button>
+  <div id="trackResult"></div>
+</div>
+
+<!-- ADMIN -->
+<div id="admin" class="section">
+  <h2>Admin Panel</h2>
+  <input type="password" id="adminPass" placeholder="Admin Password">
+  <button class="primary" onclick="loadTickets()">Load Tickets</button>
+  <div id="adminTickets"></div>
+</div>
+
+</div>
+</div>
+
+<script>
+
+/* Show Section */
+function showSection(id) {
+  document.querySelectorAll(".section").forEach(sec => {
+    sec.style.display = "none";
+  });
+  document.getElementById(id).style.display = "block";
+
+  if(id === "dashboard") loadDashboard();
+}
+
+/* Default Open Dashboard */
+showSection("dashboard");
+
+/* Create Ticket */
+document.getElementById("createForm").addEventListener("submit", async (e)=>{
+  e.preventDefault();
+  const data = Object.fromEntries(new FormData(e.target));
+
+  const res = await fetch("/api/tickets", {
+    method:"POST",
+    headers: {"Content-Type":"application/json"},
+    body: JSON.stringify(data)
+  });
+
+  const result = await res.json();
+  document.getElementById("createResult").innerText =
+    "Ticket ID: " + result.ticketId;
+
+  e.target.reset();
+});
+
+/* Track */
+async function trackTicket(){
+  const id = document.getElementById("trackId").value;
+  const res = await fetch("/api/track/" + id);
+  const data = await res.json();
+
+  if(data.message){
+    document.getElementById("trackResult").innerText = data.message;
+  } else {
+    document.getElementById("trackResult").innerHTML =
+      `<div class="card">
+        <strong>Status:</strong> ${data.status}
+      </div>`;
+  }
+}
+
+/* Admin */
+async function loadTickets(){
+  const password = document.getElementById("adminPass").value;
+  const res = await fetch("/api/tickets");
+  const tickets = await res.json();
+
+  let html="";
+  tickets.forEach(t=>{
+    html+=`
+    <div class="card">
+      ${t.ticketId} - ${t.status}
+      <select onchange="updateStatus('${t._id}', this.value)">
+        <option ${t.status=="Open"?"selected":""}>Open</option>
+        <option ${t.status=="In Progress"?"selected":""}>In Progress</option>
+        <option ${t.status=="Closed"?"selected":""}>Closed</option>
+      </select>
+    </div>`;
+  });
+
+  document.getElementById("adminTickets").innerHTML = html;
+}
+
+async function updateStatus(id,status){
+  const password = document.getElementById("adminPass").value;
+
+  await fetch("/api/tickets/"+id,{
+    method:"PUT",
+    headers:{"Content-Type":"application/json"},
+    body: JSON.stringify({
+      status: status,
+      adminPassword: password
+    })
+  });
+
+  loadTickets();
+}
+
+/* Dashboard Counters */
+async function loadDashboard(){
+  const res = await fetch("/api/tickets");
+  const tickets = await res.json();
+
+  const total = tickets.length;
+  const open = tickets.filter(t=>t.status==="Open").length;
+  const progress = tickets.filter(t=>t.status==="In Progress").length;
+  const closed = tickets.filter(t=>t.status==="Closed").length;
+
+  document.getElementById("totalBox").innerText = "Total: "+total;
+  document.getElementById("openBox").innerText = "Open: "+open;
+  document.getElementById("progressBox").innerText = "In Progress: "+progress;
+  document.getElementById("closedBox").innerText = "Closed: "+closed;
+}
+
+</script>
+
+</body>
+</html>
